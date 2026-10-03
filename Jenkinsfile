@@ -3,7 +3,6 @@ pipeline {
 
     tools {
         nodejs 'Node_24'
-        sonarScanner 'SonarQubeScanner'
     }
 
     environment {
@@ -43,6 +42,7 @@ pipeline {
         // Etapa 4: Análisis estático de código en SonarQube
         stage('SonarQube Analysis') {
             steps {
+                def scannerHome = tool 'SonarQubeScanner'
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                         sonar-scanner \
