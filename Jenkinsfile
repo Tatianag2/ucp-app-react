@@ -50,7 +50,7 @@ pipeline {
                               -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                               -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
                               -Dsonar.sources=src \
-                              -Dsonar.host.url=http://localhost:9000 \
+                              -Dsonar.host.url=http://sonarqube:9000 \
                               -Dsonar.login=\${SONAR_AUTH_TOKEN} \
                               -Dsonar.javascript.node=\${NODEJS_HOME}/bin/node \
                               -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
