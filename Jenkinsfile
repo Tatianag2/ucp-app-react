@@ -12,20 +12,35 @@ pipeline {
     }
 
     stages {
+        // Etapa 1: Checkout del código desde GitHub
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/Tatianag2/ucp-app-react.git'
             }
         }
 
-        stage('Build & Test Coverage') {
+        // Etapa 2: Instalar dependencias y build del proyecto
+        stage('Build') {
             steps {
                 sh 'npm install'
                 sh 'npm run build'
-                sh 'npm run test:coverage'
             }
         }
 
+        // Etapa 3: Pruebas Unitarias + Cobertura (JUnit + LCOV)
+        stage('Pruebas Unitarias') {
+            steps {
+                sh 'npm test -- --watchAll=false --ci --coverage --reporters=default --reporters=jest-junit'
+            }
+            post {
+                always {
+                    junit 'junit.xml'
+                    archiveArtifacts artifacts: 'junit.xml', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // Etapa 4: Análisis estático de código en SonarQube
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -43,13 +58,14 @@ pipeline {
             }
         }
 
+        // Etapa 5: Esperar aprobación del Quality Gate de SonarQube
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     script {
                         def qg = waitForQualityGate()
                         if (qg.status != 'OK') {
-                            error "Calidad no aprobada: ${qg.status}"
+                            error "Pipeline abortado: Quality Gate no aprobado (${qg.status})"
                         }
                     }
                 }
@@ -57,12 +73,19 @@ pipeline {
         }
     }
 
+    // Post-actions: Notificación por correo con estado final
     post {
-        success {
-            echo '¡Pipeline ejecutado con éxito y Quality Gate aprobado!'
-        }
-        failure {
-            echo 'Pipeline fallido. Revisar logs.'
+        always {
+            emailext (
+                subject: "Pipeline ${currentBuild.result}: ucp-app-react #${env.BUILD_NUMBER}",
+                body: """
+                    Estado del Build: ${currentBuild.result}
+                    URL del Build: ${env.BUILD_URL}
+                    Detalles de Pruebas: ${env.BUILD_URL}testReport/
+                    SonarQube: http://localhost:9000/dashboard?id=${SONAR_PROJECT_KEY}
+                """,
+                to: 'pruebaggtggv@gmail.com'
+            )
         }
     }
 }
